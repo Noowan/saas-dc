@@ -1,0 +1,150 @@
+! Startup-config last modified at Mon Nov  2 14:57:30 2026 by root
+! device: leaf-6 (cEOSLab, EOS-4.37.0F-51574443.4370F (engineering build))
+!
+no aaa root
+!
+no service interface inactive port-id allocation disabled
+!
+service routing protocols model multi-agent
+!
+agent PowerManager shutdown
+agent LedPolicy shutdown
+agent Thermostat shutdown
+agent PowerFuse shutdown
+agent StandbyCpld shutdown
+agent LicenseManager shutdown
+!
+hostname leaf-6
+!
+spanning-tree mode mstp
+!
+system l1
+   unsupported speed action error
+   unsupported error-correction action error
+!
+vlan 102
+!
+vlan 4094
+   name MLAG-PEER
+!
+vrf instance vrf-CLIENT_A
+!
+vrf instance vrf-CLIENT_B
+!
+vrf instance vrf-MGMT
+!
+interface Port-Channel100
+   description MLAG peer-link
+   switchport mode trunk
+   switchport trunk group MLAG-PEER
+!
+interface Port-Channel101
+   description host-vni10102
+   switchport access vlan 102
+   mlag 101
+!
+interface Ethernet1
+   no switchport
+   ip address 172.16.0.11/31
+!
+interface Ethernet2
+   no switchport
+   ip address 172.16.1.11/31
+!
+interface Ethernet3
+   channel-group 100 mode active
+!
+interface Ethernet4
+   channel-group 100 mode active
+!
+interface Ethernet5
+   channel-group 101 mode active
+!
+interface Ethernet99
+!
+interface Loopback0
+   ip address 10.255.0.16/32
+!
+interface Management0
+   ip address 172.20.20.23/24
+!
+interface Vlan102
+   vrf vrf-CLIENT_A
+   ip address virtual 10.10.20.1/24
+!
+interface Vlan4094
+   no autostate
+   ip address 169.254.100.1/30
+!
+interface Vxlan1
+   vxlan source-interface Loopback0
+   vxlan udp-port 4789
+   vxlan vlan 102 vni 10102
+   vxlan vrf vrf-CLIENT_A vni 10000
+!
+ip virtual-router mac-address 00:1c:73:00:00:99
+!
+ip routing
+ip routing vrf vrf-CLIENT_A
+ip routing vrf vrf-CLIENT_B
+ip routing vrf vrf-MGMT
+!
+mlag configuration
+   domain-id MLAG-VNI10102
+   local-interface Vlan4094
+   peer-address 169.254.100.2
+   peer-link Port-Channel100
+!
+router bgp 65000
+   maximum-paths 64
+   bgp bestpath as-path multipath-relax
+   router-id 10.255.0.16
+   no bgp default ipv4-unicast
+   neighbor EVPN peer group
+   neighbor EVPN send-community extended
+   neighbor UNDERLAY peer group
+   neighbor 10.255.0.1 peer group EVPN
+   neighbor 10.255.0.1 remote-as 65000
+   neighbor 10.255.0.1 update-source Loopback0
+   neighbor 10.255.0.2 peer group EVPN
+   neighbor 10.255.0.2 remote-as 65000
+   neighbor 10.255.0.2 update-source Loopback0
+   neighbor 172.16.0.10 peer group UNDERLAY
+   neighbor 172.16.0.10 remote-as 65001
+   neighbor 172.16.0.10 local-as 65106 no-prepend replace-as
+   neighbor 172.16.1.10 peer group UNDERLAY
+   neighbor 172.16.1.10 remote-as 65002
+   neighbor 172.16.1.10 local-as 65106 no-prepend replace-as
+   !
+   vlan 102
+      rd 10.255.0.16:10102
+      route-target both 65000:10102
+      redistribute learned
+   !
+   address-family evpn
+      neighbor EVPN activate
+   !
+   address-family ipv4
+      neighbor UNDERLAY activate
+      network 10.255.0.16/32
+   !
+   vrf vrf-CLIENT_A
+      rd 10.255.0.16:10000
+      route-target import evpn 65000:10000
+      route-target export evpn 65000:10000
+      router-id 10.255.0.16
+      redistribute connected
+      !
+      address-family ipv4
+         redistribute connected
+   !
+   vrf vrf-CLIENT_B
+      rd 10.255.0.16:20000
+      route-target import evpn 65000:20000
+      route-target export evpn 65000:20000
+      router-id 10.255.0.16
+      !
+      address-family ipv4
+         redistribute connected
+!
+end

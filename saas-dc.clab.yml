@@ -1,0 +1,1443 @@
+name: saas-dc
+mgmt:
+  network: clab-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  defaults:
+    kind: frrouting
+    image: quay.io/frrouting/frr:containerlab-10.7.1
+  kinds:
+    frrouting:
+      startup-config: configs/__clabNodeName__/config/frr.conf
+      daemons:
+        - bgpd
+  nodes:
+
+    spine-1:
+      exec:
+        - ip addr add 10.255.0.1/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip addr add 172.16.0.0/31 dev eth1
+        - ip link set dev eth2 mtu 9216 up
+        - ip addr add 172.16.0.2/31 dev eth2
+        - ip link set dev eth3 mtu 9216 up
+        - ip addr add 172.16.0.4/31 dev eth3
+        - ip link set dev eth4 mtu 9216 up
+        - ip addr add 172.16.0.6/31 dev eth4
+        - ip link set dev eth5 mtu 9216 up
+        - ip addr add 172.16.0.8/31 dev eth5
+        - ip link set dev eth6 mtu 9216 up
+        - ip addr add 172.16.0.10/31 dev eth6
+        - ip link set dev eth7 mtu 9216 up
+        - ip addr add 172.16.0.12/31 dev eth7
+
+        #OOB-MGMT LINK
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.1/24 dev eth99
+
+        # QoS
+        # ===== eth1 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth1 root handle 1: htb default 30"
+        - "tc class replace dev eth1 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth1 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth1 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth1 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+        
+        # ===== eth2 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth2 root handle 1: htb default 30"
+        - "tc class replace dev eth2 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth2 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth2 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth2 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth3 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth3 root handle 1: htb default 30"
+        - "tc class replace dev eth3 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth3 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth3 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth3 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth3 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth3 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth3 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth3 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth3 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth3 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth4 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth4 root handle 1: htb default 30"
+        - "tc class replace dev eth4 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth4 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth4 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth4 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth4 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth4 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth4 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth4 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth4 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth4 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth5 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth5 root handle 1: htb default 30"
+        - "tc class replace dev eth5 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth5 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth5 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth5 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth5 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth5 root handle 1: htb default 30"
+        - "tc class replace dev eth5 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth5 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth5 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth5 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth7 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth7 root handle 1: htb default 30"
+        - "tc class replace dev eth7 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth7 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth7 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth7 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth7 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth7 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth7 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth7 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth7 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth7 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+    spine-2:
+      exec:
+        - ip addr add 10.255.0.2/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip addr add 172.16.1.0/31 dev eth1
+        - ip link set dev eth2 mtu 9216 up
+        - ip addr add 172.16.1.2/31 dev eth2
+        - ip link set dev eth3 mtu 9216 up
+        - ip addr add 172.16.1.4/31 dev eth3
+        - ip link set dev eth4 mtu 9216 up
+        - ip addr add 172.16.1.6/31 dev eth4
+        - ip link set dev eth5 mtu 9216 up
+        - ip addr add 172.16.1.8/31 dev eth5
+        - ip link set dev eth6 mtu 9216 up
+        - ip addr add 172.16.1.10/31 dev eth6
+        - ip link set dev eth7 mtu 9216 up
+        - ip addr add 172.16.1.12/31 dev eth7
+
+        #OOB-MGMT LINK
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.2/24 dev eth99
+
+        # QoS
+        # ===== eth1 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth1 root handle 1: htb default 30"
+        - "tc class replace dev eth1 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth1 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth1 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth1 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+        
+        # ===== eth2 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth2 root handle 1: htb default 30"
+        - "tc class replace dev eth2 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth2 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth2 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth2 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth3 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth3 root handle 1: htb default 30"
+        - "tc class replace dev eth3 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth3 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth3 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth3 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth3 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth3 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth3 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth3 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth3 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth3 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth4 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth4 root handle 1: htb default 30"
+        - "tc class replace dev eth4 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth4 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth4 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth4 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth4 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth4 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth4 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth4 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth4 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth4 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth5 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth5 root handle 1: htb default 30"
+        - "tc class replace dev eth5 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth5 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth5 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth5 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth5 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth5 root handle 1: htb default 30"
+        - "tc class replace dev eth5 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth5 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth5 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth5 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth5 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth5 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== eth7 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth7 root handle 1: htb default 30"
+        - "tc class replace dev eth7 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth7 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth7 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth7 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth7 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth7 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth7 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth7 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth7 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth7 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+    leaf-1:
+      exec:
+        # Включение маршрутизации в ядре Linux (IP Forwarding)
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv6.conf.all.forwarding=1
+        - sysctl -w net.ipv4.conf.all.arp_ignore=1
+        - sysctl -w net.ipv4.conf.all.arp_announce=2
+        - sysctl -w net.ipv4.fib_multipath_hash_policy=1
+        - ip link set lo up
+        - ip addr replace 10.255.0.11/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip link set dev eth2 mtu 9216 up
+        - ip link set dev eth3 mtu 1500 up
+        - ip link set dev eth5 mtu 9216 up
+        - ip addr replace 172.16.0.1/31 dev eth1
+        - ip addr replace 172.16.1.1/31 dev eth2
+
+        # Маркируем входящий клиентский трафик ETH5 - EF, остальные клиентские - BE
+        - tc qdisc replace dev eth5 clsact
+        - "tc filter replace dev eth5 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0xb8 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+        - tc qdisc replace dev eth3 clsact
+        - "tc filter replace dev eth3 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0x00 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+        - tc qdisc replace dev eth4 clsact
+        - "tc filter replace dev eth4 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0x00 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+
+        # QoS на аплинках
+        # ===== Аплинк eth1 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth1 root handle 1: htb default 30"
+        - "tc class replace dev eth1 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth1 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth1 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth1 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # ===== Аплинк eth2 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth2 root handle 1: htb default 30"
+        - "tc class replace dev eth2 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth2 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth2 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth2 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # VRFы
+        - ip link add vrf-CLIENT_A type vrf table 1001
+        - ip link set vrf-CLIENT_A up
+        - ip link add vrf-CLIENT_B type vrf table 1002
+        - ip link set vrf-CLIENT_B up
+
+        #OOB-MGMT LINK
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.11/24 dev eth99
+
+        # НАСТРОЙКА ИНТЕРФЕЙСОВ L3 VNI (Symmetric IRB)
+        # Транзитный VNI 10000 для CLIENT_A
+        - ip link add br-vni10000 type bridge
+        - ip link set br-vni10000 mtu 9000 up
+        - ip link set br-vni10000 master vrf-CLIENT_A
+        - ip link add vxlan10000 type vxlan id 10000 local 10.255.0.11 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10000 mtu 9000 up
+        - ip link set vxlan10000 master br-vni10000
+
+        # Транзитный VNI 20000 для CLIENT_B
+        - ip link add br-vni20000 type bridge
+        - ip link set br-vni20000 mtu 9000 up
+        - ip link set br-vni20000 master vrf-CLIENT_B
+        - ip link add vxlan20000 type vxlan id 20000 local 10.255.0.11 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20000 mtu 9000 up
+        - ip link set vxlan20000 master br-vni20000
+
+        # l2vni 10101 10.10.10.0/24 для клиента А  / vxlan10101
+        - ip link add br10101-cl-a type bridge
+        - ip link set br10101-cl-a mtu 9000 up
+        - ip link set br10101-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10101 type vxlan id 10101 local 10.255.0.11 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10101 mtu 9000 up
+        - ip link set vxlan10101 master br10101-cl-a
+        - ip addr replace 10.10.10.1/24 dev br10101-cl-a
+        - ip link set dev br10101-cl-a address 00:00:5e:00:01:01
+
+        # l2vni 10102 10.10.20.0/24 для клиента А / vxlan10102
+        - ip link add br10102-cl-a type bridge
+        - ip link set br10102-cl-a mtu 9000 up
+        - ip link set br10102-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10102 type vxlan id 10102 local 10.255.0.11 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10102 mtu 9000 up
+        - ip link set vxlan10102 master br10102-cl-a
+        - ip addr replace 10.10.20.1/24 dev br10102-cl-a
+        - ip link set dev br10102-cl-a address 00:1c:73:00:00:99
+
+        # l2vni 20201 10.10.10.0/24 для клиента Б / vxlan20201
+        - ip link add br20201-cl-b type bridge
+        - ip link set br20201-cl-b mtu 9000 up
+        - ip link set br20201-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20201 type vxlan id 20201 local 10.255.0.11 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20201 mtu 9000 up
+        - ip link set vxlan20201 master br20201-cl-b
+        - ip addr replace 10.10.10.1/24 dev br20201-cl-b
+        - ip link set dev br20201-cl-b address 00:00:5e:02:01:01
+
+        # l2vni 20202 10.10.20.0/24 для клиента Б / vxlan20202
+        - ip link add br20202-cl-b type bridge
+        - ip link set br20202-cl-b mtu 9000 up
+        - ip link set br20202-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20202 type vxlan id 20202 local 10.255.0.11 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20202 mtu 9000 up
+        - ip link set vxlan20202 master br20202-cl-b
+        - ip addr replace 10.10.20.1/24 dev br20202-cl-b
+        - ip link set dev br20202-cl-b address 00:00:5e:02:01:02
+
+        # Привязка физических интерфейсов к бриджам (Access/ESI)
+        - ip link set eth3 master br10101-cl-a
+        - ip link set eth5 master br20202-cl-b
+
+        # EVPN multihoming: access-подключение в L2VNI 20202. Bond содержит один физический порт.
+        - ip link set dev eth4 down
+        - ip link add bond20202 type bond mode 802.3ad
+        - ip link set dev bond20202 type bond miimon 100 lacp_rate fast
+          xmit_hash_policy layer3+4 min_links 1
+        # Один LACP System ID на обоих leaf.
+        - ip link set dev bond20202 type bond ad_actor_system 02:00:00:02:02:02
+        - ip link set dev bond20202 mtu 9000
+        - ip link set dev eth4 mtu 9000
+        - ip link set dev eth4 master bond20202
+        # В bridge входит bond, а НЕ его физический slave.
+        - ip link set dev bond20202 master br20202-cl-b
+        - ip link set dev eth4 up
+        - ip link set dev bond20202 up
+
+    leaf-2:
+      exec:
+        # Включение маршрутизации в ядре Linux (IP Forwarding)
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv6.conf.all.forwarding=1
+        - sysctl -w net.ipv4.conf.all.arp_ignore=1
+        - sysctl -w net.ipv4.conf.all.arp_announce=2
+        - sysctl -w net.ipv4.fib_multipath_hash_policy=1
+        # Настройка Loopback и физических интерфейсов
+        - ip link set lo up
+        - ip addr replace 10.255.0.12/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip link set dev eth2 mtu 9216 up
+        - ip link set dev eth3 mtu 1500 up
+        - ip addr replace 172.16.0.3/31 dev eth1
+        - ip addr replace 172.16.1.3/31 dev eth2
+
+        # Маркируем входящий клиентский трафик ETH5 - EF, остальные клиентские - BE
+        - tc qdisc replace dev eth3 clsact
+        - "tc filter replace dev eth3 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0x00 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+        - tc qdisc replace dev eth4 clsact
+        - "tc filter replace dev eth4 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0x00 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+
+        # QoS на аплинках
+        # ===== Аплинк eth1 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth1 root handle 1: htb default 30"
+        - "tc class replace dev eth1 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth1 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth1 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth1 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+        # ===== Аплинк eth2 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth2 root handle 1: htb default 30"
+        - "tc class replace dev eth2 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth2 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth2 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth2 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # VRFы
+        - ip link add vrf-CLIENT_A type vrf table 1001
+        - ip link set vrf-CLIENT_A up
+        - ip link add vrf-CLIENT_B type vrf table 1002
+        - ip link set vrf-CLIENT_B up
+
+        #OOB-MGMT LINK
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.11/24 dev eth99
+
+        # НАСТРОЙКА ИНТЕРФЕЙСОВ L3 VNI (Symmetric IRB)
+        # Транзитный VNI 10000 для CLIENT_A
+        - ip link add br-vni10000 type bridge
+        - ip link set br-vni10000 mtu 9000 up
+        - ip link set br-vni10000 master vrf-CLIENT_A
+        - ip link add vxlan10000 type vxlan id 10000 local 10.255.0.12 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10000 mtu 9000 up
+        - ip link set vxlan10000 master br-vni10000
+
+        # Транзитный VNI 20000 для CLIENT_B
+        - ip link add br-vni20000 type bridge
+        - ip link set br-vni20000 mtu 9000 up
+        - ip link set br-vni20000 master vrf-CLIENT_B
+        - ip link add vxlan20000 type vxlan id 20000 local 10.255.0.12 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20000 mtu 9000 up
+        - ip link set vxlan20000 master br-vni20000
+
+        # l2vni 10101 10.10.10.0/24 для клиента А / vxlan10101
+        - ip link add br10101-cl-a type bridge
+        - ip link set br10101-cl-a mtu 9000 up
+        - ip link set br10101-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10101 type vxlan id 10101 local 10.255.0.12 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10101 mtu 9000 up
+        - ip link set vxlan10101 master br10101-cl-a
+        - ip addr replace 10.10.10.1/24 dev br10101-cl-a
+        - ip link set dev br10101-cl-a address 00:00:5e:00:01:01
+
+        # l2vni 10102 10.10.20.0/24 для клиента А / vxlan10102
+        - ip link add br10102-cl-a type bridge
+        - ip link set br10102-cl-a mtu 9000 up
+        - ip link set br10102-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10102 type vxlan id 10102 local 10.255.0.12 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10102 mtu 9000 up
+        - ip link set vxlan10102 master br10102-cl-a
+        - ip addr replace 10.10.20.1/24 dev br10102-cl-a
+        - ip link set dev br10102-cl-a address 00:1c:73:00:00:99
+
+        # l2vni 20201 10.10.10.0/24 для клиента Б / vxlan20201
+        - ip link add br20201-cl-b type bridge
+        - ip link set br20201-cl-b mtu 9000 up
+        - ip link set br20201-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20201 type vxlan id 20201 local 10.255.0.12 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20201 mtu 9000 up
+        - ip link set vxlan20201 master br20201-cl-b
+        - ip addr replace 10.10.10.1/24 dev br20201-cl-b
+        - ip link set dev br20201-cl-b address 00:00:5e:02:01:01
+
+        # l2vni 20202 10.10.20.0/24 для клиента Б / vxlan20202
+        - ip link add br20202-cl-b type bridge
+        - ip link set br20202-cl-b mtu 9000 up
+        - ip link set br20202-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20202 type vxlan id 20202 local 10.255.0.12 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20202 mtu 9000 up
+        - ip link set vxlan20202 master br20202-cl-b
+        - ip addr replace 10.10.20.1/24 dev br20202-cl-b
+        - ip link set dev br20202-cl-b address 00:00:5e:02:01:02
+
+        # Привязка физических интерфейсов к бриджам (Access/ESI)
+        - ip link set eth3 master br10101-cl-a
+
+        # EVPN multihoming: access-подключение в L2VNI 20202. Bond содержит один физический порт.
+        - ip link set dev eth4 down
+        - ip link add bond20202 type bond mode 802.3ad
+        - ip link set dev bond20202 type bond miimon 100 lacp_rate fast
+          xmit_hash_policy layer3+4 min_links 1
+        # Один LACP System ID на обоих leaf.
+        - ip link set dev bond20202 type bond ad_actor_system 02:00:00:02:02:02
+        - ip link set dev bond20202 mtu 9000
+        - ip link set dev eth4 mtu 9000
+        - ip link set dev eth4 master bond20202
+        # В bridge входит bond, а НЕ его физический slave.
+        - ip link set dev bond20202 master br20202-cl-b
+        - ip link set dev eth4 up
+        - ip link set dev bond20202 up
+
+    leaf-3:
+      exec:
+        # Включение маршрутизации в ядре Linux (IP Forwarding)
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv6.conf.all.forwarding=1
+        - sysctl -w net.ipv4.conf.all.arp_ignore=1
+        - sysctl -w net.ipv4.conf.all.arp_announce=2
+        - sysctl -w net.ipv4.fib_multipath_hash_policy=1
+        # Настройка Loopback и физических интерфейсов
+        - ip link set lo up
+        - ip addr replace 10.255.0.13/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip link set dev eth2 mtu 9216 up
+        - ip link set dev eth3 mtu 1500 up
+        - ip addr replace 172.16.0.5/31 dev eth1
+        - ip addr replace 172.16.1.5/31 dev eth2
+
+        # Маркируем входящий клиентский трафик ETH5 - EF, остальные клиентские - BE
+        - tc qdisc replace dev eth3 clsact
+        - "tc filter replace dev eth3 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0x00 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+
+        # QoS на аплинках
+        # ===== Аплинк eth1 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth1 root handle 1: htb default 30"
+        - "tc class replace dev eth1 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth1 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth1 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth1 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+        # ===== Аплинк eth2 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth2 root handle 1: htb default 30"
+        - "tc class replace dev eth2 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth2 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth2 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth2 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # VRFы
+        - ip link add vrf-CLIENT_A type vrf table 1001
+        - ip link set vrf-CLIENT_A up
+        - ip link add vrf-CLIENT_B type vrf table 1002
+        - ip link set vrf-CLIENT_B up
+
+        #OOB-MGMT LINK
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.11/24 dev eth99
+
+        # НАСТРОЙКА ИНТЕРФЕЙСОВ L3 VNI (Symmetric IRB)
+        # Транзитный VNI 10000 для CLIENT_A
+        - ip link add br-vni10000 type bridge
+        - ip link set br-vni10000 mtu 9000 up
+        - ip link set br-vni10000 master vrf-CLIENT_A
+        - ip link add vxlan10000 type vxlan id 10000 local 10.255.0.13 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10000 mtu 9000 up
+        - ip link set vxlan10000 master br-vni10000
+
+        # Транзитный VNI 20000 для CLIENT_B
+        - ip link add br-vni20000 type bridge
+        - ip link set br-vni20000 mtu 9000 up
+        - ip link set br-vni20000 master vrf-CLIENT_B
+        - ip link add vxlan20000 type vxlan id 20000 local 10.255.0.13 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20000 mtu 9000 up
+        - ip link set vxlan20000 master br-vni20000
+
+        # l2vni 10101 10.10.10.0/24 для клиента А / vxlan10101
+        - ip link add br10101-cl-a type bridge
+        - ip link set br10101-cl-a mtu 9000 up
+        - ip link set br10101-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10101 type vxlan id 10101 local 10.255.0.13 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10101 mtu 9000 up
+        - ip link set vxlan10101 master br10101-cl-a
+        - ip addr replace 10.10.10.1/24 dev br10101-cl-a
+        - ip link set dev br10101-cl-a address 00:00:5e:00:01:01
+
+        # l2vni 10102 10.10.20.0/24 для клиента А / vxlan10102
+        - ip link add br10102-cl-a type bridge
+        - ip link set br10102-cl-a mtu 9000 up
+        - ip link set br10102-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10102 type vxlan id 10102 local 10.255.0.13 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10102 mtu 9000 up
+        - ip link set vxlan10102 master br10102-cl-a
+        - ip addr replace 10.10.20.1/24 dev br10102-cl-a
+        - ip link set dev br10102-cl-a address 00:1c:73:00:00:99
+
+        # l2vni 20201 10.10.10.0/24 для клиента Б / vxlan20201
+        - ip link add br20201-cl-b type bridge
+        - ip link set br20201-cl-b mtu 9000 up
+        - ip link set br20201-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20201 type vxlan id 20201 local 10.255.0.13 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20201 mtu 9000 up
+        - ip link set vxlan20201 master br20201-cl-b
+        - ip addr replace 10.10.10.1/24 dev br20201-cl-b
+        - ip link set dev br20201-cl-b address 00:00:5e:02:01:01
+
+        # l2vni 20202 10.10.20.0/24 для клиента Б / vxlan20202
+        - ip link add br20202-cl-b type bridge
+        - ip link set br20202-cl-b mtu 9000 up
+        - ip link set br20202-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20202 type vxlan id 20202 local 10.255.0.13 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20202 mtu 9000 up
+        - ip link set vxlan20202 master br20202-cl-b
+        - ip addr replace 10.10.20.1/24 dev br20202-cl-b
+        - ip link set dev br20202-cl-b address 00:00:5e:02:01:02
+
+        # Привязка физических интерфейсов к бриджам (Access/ESI)
+        - ip link set eth3 master br20201-cl-b
+
+    leaf-4:
+      exec:
+        # Включение маршрутизации в ядре Linux (IP Forwarding)
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv6.conf.all.forwarding=1
+        - sysctl -w net.ipv4.conf.all.arp_ignore=1
+        - sysctl -w net.ipv4.conf.all.arp_announce=2
+        - sysctl -w net.ipv4.fib_multipath_hash_policy=1
+        # Настройка Loopback и физических интерфейсов
+        - ip link set lo up
+        - ip addr replace 10.255.0.14/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip link set dev eth2 mtu 9216 up
+        - ip link set dev eth3 mtu 1500 up
+        - ip link set dev eth5 mtu 1500 up
+        - ip addr replace 172.16.0.7/31 dev eth1
+        - ip addr replace 172.16.1.7/31 dev eth2
+
+        # Маркируем входящий клиентский трафик ETH5 - EF, остальные клиентские - BE
+        - tc qdisc replace dev eth5 clsact
+        - "tc filter replace dev eth5 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0xb8 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+        - tc qdisc replace dev eth3 clsact
+        - "tc filter replace dev eth3 ingress protocol ip pref 10 matchall
+          action pedit ex munge ip dsfield set 0x00 retain 0xfc pipe action csum
+          ip4h pipe action gact pass"
+
+        # QoS на аплинках
+        # ===== Аплинк eth1 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth1 root handle 1: htb default 30"
+        - "tc class replace dev eth1 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth1 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth1 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth1 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth1 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth1 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+        # ===== Аплинк eth2 =====
+        # Корневая дисциплина и общий лимит 100 Мбит/с.
+        - "tc qdisc replace dev eth2 root handle 1: htb default 30"
+        - "tc class replace dev eth2 parent 1: classid 1:1 htb rate 100mbit ceil
+          100mbit"
+        # CS6 + CS7: гарантированно 5 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:10 htb rate 5mbit ceil
+          100mbit prio 0"
+        - "tc qdisc replace dev eth2 parent 1:10 handle 110: fq_codel"
+        # EF: гарантированно 25 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:20 htb rate 25mbit
+          ceil 100mbit prio 1"
+        - "tc qdisc replace dev eth2 parent 1:20 handle 120: fq_codel"
+        # BE: гарантированно 70 Мбит/с.
+        - "tc class replace dev eth2 parent 1:1 classid 1:30 htb rate 70mbit
+          ceil 100mbit prio 2"
+        - "tc qdisc replace dev eth2 parent 1:30 handle 130: fq_codel"
+        # CS6 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 10 u32 match ip
+          dsfield 0xc0 0xfc flowid 1:10"
+        # CS7 → класс 1:10.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 11 u32 match ip
+          dsfield 0xe0 0xfc flowid 1:10"
+        # EF → класс 1:20. Остальное → default-класс 1:30.
+        - "tc filter replace dev eth2 parent 1: protocol ip pref 20 u32 match ip
+          dsfield 0xb8 0xfc flowid 1:20"
+
+        # VRFы
+        - ip link add vrf-CLIENT_A type vrf table 1001
+        - ip link set vrf-CLIENT_A up
+        - ip link add vrf-CLIENT_B type vrf table 1002
+        - ip link set vrf-CLIENT_B up
+
+        #OOB-MGMT LINK
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.11/24 dev eth99
+
+        # НАСТРОЙКА ИНТЕРФЕЙСОВ L3 VNI (Symmetric IRB)
+        # Транзитный VNI 10000 для CLIENT_A
+        - ip link add br-vni10000 type bridge
+        - ip link set br-vni10000 mtu 9000 up
+        - ip link set br-vni10000 master vrf-CLIENT_A
+        - ip link add vxlan10000 type vxlan id 10000 local 10.255.0.14 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10000 mtu 9000 up
+        - ip link set vxlan10000 master br-vni10000
+
+        # Транзитный VNI 20000 для CLIENT_B
+        - ip link add br-vni20000 type bridge
+        - ip link set br-vni20000 mtu 9000 up
+        - ip link set br-vni20000 master vrf-CLIENT_B
+        - ip link add vxlan20000 type vxlan id 20000 local 10.255.0.14 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20000 mtu 9000 up
+        - ip link set vxlan20000 master br-vni20000
+
+        # l2vni 10101 10.10.10.0/24 для клиента А / vxlan10101
+        - ip link add br10101-cl-a type bridge
+        - ip link set br10101-cl-a mtu 9000 up
+        - ip link set br10101-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10101 type vxlan id 10101 local 10.255.0.14 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10101 mtu 9000 up
+        - ip link set vxlan10101 master br10101-cl-a
+        - ip addr replace 10.10.10.1/24 dev br10101-cl-a
+        - ip link set dev br10101-cl-a address 00:00:5e:00:01:01
+
+        # l2vni 10102 10.10.20.0/24 для клиента А / vxlan10102
+        - ip link add br10102-cl-a type bridge
+        - ip link set br10102-cl-a mtu 9000 up
+        - ip link set br10102-cl-a master vrf-CLIENT_A
+        - ip link add vxlan10102 type vxlan id 10102 local 10.255.0.14 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10102 mtu 9000 up
+        - ip link set vxlan10102 master br10102-cl-a
+        - ip addr replace 10.10.20.1/24 dev br10102-cl-a
+        - ip link set dev br10102-cl-a address 00:1c:73:00:00:99
+
+        # l2vni 20201 10.10.10.0/24 для клиента Б / vxlan20201
+        - ip link add br20201-cl-b type bridge
+        - ip link set br20201-cl-b mtu 9000 up
+        - ip link set br20201-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20201 type vxlan id 20201 local 10.255.0.14 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20201 mtu 9000 up
+        - ip link set vxlan20201 master br20201-cl-b
+        - ip addr replace 10.10.10.1/24 dev br20201-cl-b
+        - ip link set dev br20201-cl-b address 00:00:5e:02:01:01
+
+        # l2vni 20202 10.10.20.0/24 для клиента Б / vxlan20202
+        - ip link add br20202-cl-b type bridge
+        - ip link set br20202-cl-b mtu 9000 up
+        - ip link set br20202-cl-b master vrf-CLIENT_B
+        - ip link add vxlan20202 type vxlan id 20202 local 10.255.0.14 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20202 mtu 9000 up
+        - ip link set vxlan20202 master br20202-cl-b
+        - ip addr replace 10.10.20.1/24 dev br20202-cl-b
+        - ip link set dev br20202-cl-b address 00:00:5e:02:01:02
+
+        # Привязка физических интерфейсов к бриджам (Access/ESI)
+        - ip link set eth3 master br20201-cl-b
+        - ip link set eth5 master br10102-cl-a
+
+    edge-leaf-5:
+      image: lab/frr-edge:nat
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv6.conf.all.forwarding=1
+        - sysctl -w net.ipv4.conf.all.arp_ignore=1
+        - sysctl -w net.ipv4.conf.all.arp_announce=2
+        - sysctl -w net.ipv4.fib_multipath_hash_policy=1
+        - ip link set lo up
+        - ip addr replace 10.255.0.15/32 dev lo
+        - ip link set dev eth1 mtu 9216 up
+        - ip link set dev eth2 mtu 9216 up
+        - ip link set dev eth3 mtu 1500 up
+        - ip addr replace 172.16.0.9/31 dev eth1
+        - ip addr replace 172.16.1.9/31 dev eth2
+        - ip addr replace 203.0.113.2/29 dev eth3
+        - ip link add vrf-CLIENT_A type vrf table 1001
+        - ip link set vrf-CLIENT_A up
+        - ip link add vrf-CLIENT_B type vrf table 1002
+        - ip link set vrf-CLIENT_B up
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set dev eth99 mtu 1500 up
+        - ip addr add 192.168.250.11/24 dev eth99
+        - ip link add br-vni10000 type bridge
+        - ip link set br-vni10000 mtu 9000 up
+        - ip link set br-vni10000 master vrf-CLIENT_A
+        - ip link add vxlan10000 type vxlan id 10000 local 10.255.0.15 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan10000 mtu 9000 up
+        - ip link set vxlan10000 master br-vni10000
+        - ip link add br-vni20000 type bridge
+        - ip link set br-vni20000 mtu 9000 up
+        - ip link set br-vni20000 master vrf-CLIENT_B
+        - ip link add vxlan20000 type vxlan id 20000 local 10.255.0.15 dstport
+          4789 nolearning tos inherit
+        - ip link set vxlan20000 mtu 9000 up
+        - ip link set vxlan20000 master br-vni20000
+        - |
+          sh -ec '
+          ASN=65000
+
+          command -v iptables >/dev/null || {
+            echo "В образе edge-leaf отсутствует iptables"
+            exit 1
+          }
+
+          sysctl -w net.ipv4.ip_forward=1
+
+          for CLIENT in A B; do
+            case "$CLIENT" in
+              A) NUM=101; PUBLIC=203.0.113.3 ;;
+              B) NUM=102; PUBLIC=203.0.113.4 ;;
+            esac
+
+            VRF="vrf-CLIENT_${CLIENT}"
+            NS="nat-${CLIENT}"
+            VETH="to-nat-${CLIENT}"
+            # Отдельный namespace для каждого клиента.
+            ip netns add "$NS"
+            ip netns exec "$NS" sysctl -w net.ipv4.ip_forward=1
+            ip netns exec "$NS" sysctl -w net.ipv4.conf.all.rp_filter=0
+            ip netns exec "$NS" sysctl -w net.ipv4.conf.default.rp_filter=0
+            ip -n "$NS" link set lo up
+            # Соединяем veth патч-кордом клиентский VRF с его namespace.
+            ip link add "$VETH" type veth peer name inside netns "$NS"
+            ip link set "$VETH" master "$VRF"
+            ip addr add "169.254.${NUM}.1/30" dev "$VETH"
+            ip link set "$VETH" mtu 1500 up
+            ip -n "$NS" addr add "169.254.${NUM}.2/30" dev inside
+            ip -n "$NS" link set inside mtu 1500 up
+            # Внешний интерфейс в том же сегменте, что и Internet.
+            ip link add "wan-${CLIENT}" link eth3 type macvlan mode bridge
+            ip link set "wan-${CLIENT}" netns "$NS"
+            ip -n "$NS" link set "wan-${CLIENT}" name outside
+            ip -n "$NS" addr add "${PUBLIC}/29" dev outside
+            ip -n "$NS" link set outside mtu 1500 up
+            # К 8.8.8.8 идём через Internet.
+            # Всё остальное, включая ответы после обратного NAT, направляем обратно в клиентский VRF.
+            ip -n "$NS" route add 8.8.8.8/32 \
+              via 203.0.113.1 dev outside
+            ip -n "$NS" route add default \
+              via "169.254.${NUM}.1" dev inside
+            ip netns exec "$NS" iptables -t nat -A POSTROUTING \
+              -d 8.8.8.8/32 -o outside \
+              -j SNAT --to-source "$PUBLIC"
+            # На всякий случай добавляем специфик 8.8.8.8 рядом с default.
+            # Через network публикуем его в BGP, затем в EVPN Type-5.
+            vtysh \
+              -c "configure terminal" \
+              -c "ip route 8.8.8.8/32 169.254.${NUM}.2 vrf ${VRF}" \
+              -c "router bgp ${ASN} vrf ${VRF}" \
+              -c "address-family ipv4 unicast" \
+              -c "network 8.8.8.8/32" \
+              -c "exit-address-family" \
+              -c "address-family l2vpn evpn" \
+              -c "advertise ipv4 unicast"
+          done
+          '
+
+    internet:
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+        - sysctl -w net.ipv6.conf.all.forwarding=1
+        - ip link set lo up
+        - ip addr replace 10.255.0.255/32 dev lo
+        - ip link set dev eth1 mtu 1500 up
+        - ip link set dev eth2 mtu 9216 up
+        - ip addr replace 203.0.113.1/29 dev eth1
+        - ip addr replace 8.8.8.1/24 dev eth2
+
+    mgmt-sw:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        # Обычный L2-коммутатор.
+        - ip link add br-oob type bridge
+        - ip link set dev br-oob up
+        - ip addr add 192.168.250.2/24 dev br-oob
+        # Порты к сетевым устройствам.
+        - ip link set dev eth1 master br-oob up
+        - ip link set dev eth2 master br-oob up
+        - ip link set dev eth3 master br-oob up
+        - ip link set dev eth4 master br-oob up
+        - ip link set dev eth5 master br-oob up
+        - ip link set dev eth6 master br-oob up
+        - ip link set dev eth7 master br-oob up
+        # Порты к серверам.
+        - ip link set dev eth8 master br-oob up
+        - ip link set dev eth9 master br-oob up
+        - ip link set dev eth10 master br-oob up
+        - ip link set dev eth11 master br-oob up
+        - ip link set dev eth12 master br-oob up
+        - ip link set dev eth13 master br-oob up
+        - ip link set dev eth14 master br-oob up        
+        - ip link set dev eth15 master br-oob up
+        - ip link set dev eth16 master br-oob up
+        # Порт к тачке администратора
+        - ip link set dev eth99 master br-oob up
+
+    leaf-6:
+      kind: arista_ceos
+      image: ceos:lab
+      startup-config: configs/leaf-6/flash/startup-config
+
+    leaf-7:
+      kind: arista_ceos
+      image: ceos:lab
+      startup-config: configs/leaf-7/flash/startup-config
+
+    #----------------------------HOSTS--------------------------------------
+    cl-a-vni10101-1:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 10.10.10.11/24 dev eth1
+        - ip route replace default via 10.10.10.1
+
+    cl-a-vni10101-2:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 10.10.10.12/24 dev eth1
+        - ip route replace default via 10.10.10.1
+
+    cl-b-vni20201-1:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 10.10.10.13/24 dev eth1
+        - ip route replace default via 10.10.10.1
+
+    cl-b-vni20201-2:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 10.10.10.14/24 dev eth1
+        - ip route replace default via 10.10.10.1
+    cl-b-vni20202-1:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 10.10.20.11/24 dev eth1
+        - ip route replace default via 10.10.20.1
+
+    cl-a-vni10102-1:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 10.10.20.12/24 dev eth1
+        - ip route replace default via 10.10.20.1
+
+    8-8-8-8:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 8.8.8.8/24 dev eth1
+        - ip route replace default via 8.8.8.1
+
+    mgmt-pc:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link add vrf-MGMT type vrf table 1003
+        - ip link set vrf-MGMT up
+        - ip link set dev eth99 master vrf-MGMT
+        - ip link set eth1 mtu 1500 up
+        - ip addr replace 192.168.250.250/24 dev eth1
+
+    cl-b-vni20202-mh:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link set dev eth1 down
+        - ip link set dev eth2 down
+        - ip link add bond0 type bond mode 802.3ad
+        - ip link set dev bond0 type bond miimon 100 lacp_rate fast
+          xmit_hash_policy layer3+4 min_links 1
+        - ip link set dev bond0 address 02:00:00:20:20:50
+        - ip link set dev bond0 mtu 9000
+        - ip link set dev eth1 mtu 9000
+        - ip link set dev eth2 mtu 9000
+        - ip link set dev eth1 master bond0
+        - ip link set dev eth2 master bond0
+        - ip link set dev eth1 up
+        - ip link set dev eth2 up
+        - ip link set dev bond0 up
+        - ip addr replace 10.10.20.50/24 dev bond0
+        - ip route replace default via 10.10.20.1 dev bond0
+
+    cl-a-vni10102-mlag:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip link set dev eth1 down
+        - ip link set dev eth2 down
+        - ip link add bond0 type bond mode 802.3ad
+        - ip link set dev bond0 type bond miimon 100 lacp_rate fast
+          xmit_hash_policy layer3+4 min_links 1
+        - ip link set dev bond0 address 02:00:00:10:20:60
+        - ip link set dev bond0 mtu 1500
+        - ip link set dev eth1 mtu 1500
+        - ip link set dev eth2 mtu 1500
+        - ip link set dev eth1 master bond0
+        - ip link set dev eth2 master bond0
+        - ip link set dev eth1 up
+        - ip link set dev eth2 up
+        - ip link set dev bond0 up
+        - ip addr replace 10.10.20.60/24 dev bond0
+        - ip route replace default via 10.10.20.1 dev bond0
+
+  links:
+    - endpoints: [ spine-1:eth1, leaf-1:eth1 ]
+    - endpoints: [ spine-1:eth2, leaf-2:eth1 ]
+    - endpoints: [ spine-1:eth3, leaf-3:eth1 ]
+    - endpoints: [ spine-1:eth4, leaf-4:eth1 ]
+    - endpoints: [ spine-2:eth1, leaf-1:eth2 ]
+    - endpoints: [ spine-2:eth2, leaf-2:eth2 ]
+    - endpoints: [ spine-2:eth3, leaf-3:eth2 ]
+    - endpoints: [ spine-2:eth4, leaf-4:eth2 ]
+    - endpoints: [ leaf-1:eth3, cl-a-vni10101-1:eth1 ]
+    - endpoints: [ leaf-2:eth3, cl-a-vni10101-2:eth1 ]
+    - endpoints: [ leaf-1:eth5, cl-b-vni20202-1:eth1 ]
+    - endpoints: [ leaf-4:eth5, cl-a-vni10102-1:eth1 ]
+    - endpoints: [ leaf-1:eth4, cl-b-vni20202-mh:eth1 ]
+    - endpoints: [ leaf-2:eth4, cl-b-vni20202-mh:eth2 ]
+    - endpoints: [ leaf-3:eth3, cl-b-vni20201-1:eth1 ]
+    - endpoints: [ leaf-4:eth3, cl-b-vni20201-2:eth1 ]
+    - endpoints: [ edge-leaf-5:eth1, spine-1:eth5 ]
+    - endpoints: [ edge-leaf-5:eth2, spine-2:eth5 ]
+    - endpoints: [ edge-leaf-5:eth3, internet:eth1 ]
+    - endpoints: [ internet:eth2, 8-8-8-8:eth1 ]
+    - endpoints: [ "spine-1:eth99", "mgmt-sw:eth1" ]
+    - endpoints: [ "spine-2:eth99", "mgmt-sw:eth2" ]
+    - endpoints: [ "leaf-1:eth99", "mgmt-sw:eth3" ]
+    - endpoints: [ "leaf-2:eth99", "mgmt-sw:eth4" ]
+    - endpoints: [ "leaf-3:eth99", "mgmt-sw:eth5" ]
+    - endpoints: [ "leaf-4:eth99", "mgmt-sw:eth6" ]
+    - endpoints: [ "edge-leaf-5:eth99", "mgmt-sw:eth7" ]
+    - endpoints: [ "cl-b-vni20202-1:eth99", "mgmt-sw:eth8" ]
+    - endpoints: [ "cl-a-vni10101-1:eth99", "mgmt-sw:eth9" ]
+    - endpoints: [ "cl-a-vni10101-2:eth99", "mgmt-sw:eth10" ]
+    - endpoints: [ "cl-b-vni20201-1:eth99", "mgmt-sw:eth11" ]
+    - endpoints: [ "cl-b-vni20201-2:eth99", "mgmt-sw:eth12" ]
+    - endpoints: [ "cl-a-vni10102-1:eth99", "mgmt-sw:eth13" ]
+    - endpoints: [ "leaf-6:eth99", "mgmt-sw:eth14" ]
+    - endpoints: [ "leaf-7:eth99", "mgmt-sw:eth15" ]
+    - endpoints: [ "mgmt-pc:eth1", "mgmt-sw:eth99" ]
+    - endpoints: [ leaf-7:eth5, cl-a-vni10102-mlag:eth2 ]
+    - endpoints: [ leaf-6:eth5, cl-a-vni10102-mlag:eth1 ]
+    - endpoints: [ leaf-6:eth1, spine-1:eth6 ]
+    - endpoints: [ leaf-6:eth2, spine-2:eth6 ]
+    - endpoints: [ leaf-7:eth1, spine-1:eth7 ]
+    - endpoints: [ leaf-7:eth2, spine-2:eth7 ]
+    - endpoints: [ leaf-6:eth3, leaf-7:eth3 ]
+    - endpoints: [ leaf-6:eth4, leaf-7:eth4 ]
+

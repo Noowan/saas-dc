@@ -1,0 +1,179 @@
+{
+  "freeTextAnnotations": [],
+  "freeShapeAnnotations": [],
+  "trafficRateAnnotations": [],
+  "groupStyleAnnotations": [],
+  "networkNodeAnnotations": [],
+  "nodeAnnotations": [
+    {
+      "id": "spine-1",
+      "position": {
+        "x": -80,
+        "y": 60
+      },
+      "icon": "spine",
+      "labelPosition": "top"
+    },
+    {
+      "id": "spine-2",
+      "position": {
+        "x": 960,
+        "y": 60
+      },
+      "icon": "spine",
+      "labelPosition": "top"
+    },
+    {
+      "id": "leaf-1",
+      "position": {
+        "x": -260,
+        "y": 380
+      },
+      "icon": "leaf"
+    },
+    {
+      "id": "leaf-2",
+      "position": {
+        "x": 200,
+        "y": 360
+      },
+      "icon": "leaf"
+    },
+    {
+      "id": "leaf-3",
+      "position": {
+        "x": 460,
+        "y": 360
+      },
+      "icon": "leaf"
+    },
+    {
+      "id": "leaf-4",
+      "position": {
+        "x": 820,
+        "y": 360
+      },
+      "icon": "leaf"
+    },
+    {
+      "id": "cl-a-vni10101-1",
+      "position": {
+        "x": -200,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "cl-b-vni20201-1",
+      "position": {
+        "x": 460,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "cl-b-vni20202-1",
+      "position": {
+        "x": -400,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "cl-a-vni10102-1",
+      "position": {
+        "x": 1000,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "edge-leaf-5",
+      "position": {
+        "x": 1200,
+        "y": 360
+      },
+      "icon": "leaf"
+    },
+    {
+      "id": "8-8-8-8",
+      "position": {
+        "x": 1200,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "internet",
+      "position": {
+        "x": 1200,
+        "y": 560
+      },
+      "icon": "cloud"
+    },
+    {
+      "id": "mgmt-sw",
+      "position": {
+        "x": 460,
+        "y": -260
+      }
+    },
+    {
+      "id": "cl-a-vni10101-2",
+      "position": {
+        "x": 220,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "cl-b-vni20201-2",
+      "position": {
+        "x": 800,
+        "y": 740
+      },
+      "icon": "server"
+    },
+    {
+      "id": "cl-b-vni20202-mh",
+      "position": {
+        "x": 0,
+        "y": 740
+      },
+      "icon": "server",
+      "interfacePattern": "eth{n}"
+    },
+    {
+      "id": "mgmt-pc",
+      "position": {
+        "x": 460,
+        "y": -460
+      }
+    },
+    {
+      "id": "cl-a-vni10102-mlag",
+      "position": {
+        "x": 1560,
+        "y": 740
+      }
+    },
+    {
+      "id": "leaf-7",
+      "position": {
+        "x": 1780,
+        "y": 360
+      },
+      "icon": "leaf"
+    },
+    {
+      "id": "leaf-6",
+      "position": {
+        "x": 1380,
+        "y": 360
+      }
+    }
+  ],
+  "edgeAnnotations": [],
+  "aliasEndpointAnnotations": [],
+  "viewerSettings": {}
+}
